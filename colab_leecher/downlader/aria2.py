@@ -1,10 +1,11 @@
 # copyright 2023 © Xron Trix | https://github.com/Xrontrix10
 
+
 import re
 import logging
 import subprocess
 from datetime import datetime
-from colab_leecher.utility.helper import sizeUnit, status_bar, getTime
+from colab_leecher.utility.helper import sizeUnit, status_bar
 from colab_leecher.utility.variables import BOT, Aria2c, Paths, Messages, BotTimes
 
 
@@ -38,6 +39,8 @@ async def aria2_Download(link: str, num: int):
         if output == b"" and proc.poll() is not None:
             break
         if output:
+            # sys.stdout.write(output.decode("utf-8"))
+            # sys.stdout.flush()
             await on_output(output.decode("utf-8"))
 
     # Retrieve exit code and any error output
@@ -72,35 +75,22 @@ def get_Aria2c_Name(link):
 async def on_output(output: str):
     global link_info
     total_size = "0B"
-    progress_percentage = "0%"
+    progress_percentage = "0B"
     downloaded_bytes = "0B"
-    eta = "0s"
-    
+    eta = "0S"
     try:
         if "ETA:" in output:
             parts = output.split()
-            total_size = parts[1].split("/")[1].split("(")[0]
-            progress_percentage = parts[1].split("(")[1].split(")")[0]
+            total_size = parts[1].split("/")[1]
+            total_size = total_size.split("(")[0]
+            progress_percentage = parts[1][parts[1].find("(") + 1 : parts[1].find(")")]
             downloaded_bytes = parts[1].split("/")[0]
-            
-            remaining_bytes = float(parts[7]) - float(parts[2])
-            bytes_per_second = float(parts[9][1:]) * (1024 if parts[10][-1] == 'K' else 1)  # Convert KB/s to bytes/s if necessary
-            if bytes_per_second != 0:
-                remaining_seconds = remaining_bytes / bytes_per_second
-                eta = getTime(remaining_seconds)
+            eta = parts[4].split(":")[1][:-1]
+    except Exception as do:
+        logging.error(f"Could't Get Info Due to: {do}")
 
-    except Exception as e:
-        logging.error(f"Couldn't get info due to: {e}")
-    
-    # Calculate elapsed time (ensure elapsed_time_seconds is at least 1)
-    elapsed_time_seconds = max((datetime.now() - BotTimes.task_start).seconds, 1)
-
-    # Format ETA in the desired format (e.g., "12s", "1m 28s")
-    eta_formatted = eta
-
-    percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # Extract the progress percentage
-    down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # Extract the downloaded bytes
-    
+    percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # type: ignore
+    down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # type: ignore
     down_unit = re.findall("[a-zA-Z]+", downloaded_bytes)[0]
     if "G" in down_unit:
         spd = 3
@@ -111,20 +101,23 @@ async def on_output(output: str):
     else:
         spd = 0
 
-    # Calculate current download speed (avoid division by zero)
-    if elapsed_time_seconds != 0:
-        current_speed = (float(down) * 1024 ** spd) / elapsed_time_seconds
-    else:
-        current_speed = 0
+    elapsed_time_seconds = (datetime.now() - BotTimes.task_start).seconds
 
-    speed_string = f"{sizeUnit(current_speed)}/s"
+    if elapsed_time_seconds >= 270 and not Aria2c.link_info:
+        logging.error("Failed to get download information ! Probably dead link 💀")
+    # Only Do this if got Information
+    if total_size != "0B":
+        # Calculate download speed
+        Aria2c.link_info = True
+        current_speed = (float(down) * 1024**spd) / elapsed_time_seconds
+        speed_string = f"{sizeUnit(current_speed)}/s"
 
-    await status_bar(
-        Messages.status_head,
-        speed_string,
-        int(percentage),
-        eta_formatted,  # Use the formatted ETA value
-        downloaded_bytes,
-        total_size,
-        "Aria2c 🧨",
+        await status_bar(
+            Messages.status_head,
+            speed_string,
+            int(percentage),
+            eta,
+            downloaded_bytes,
+            total_size,
+            "Aria2c 🧨",
     )
