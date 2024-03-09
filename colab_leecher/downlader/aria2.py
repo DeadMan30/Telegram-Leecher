@@ -90,8 +90,8 @@ async def on_output(output: str):
     except Exception as e:
         logging.error(f"Couldn't get info due to: {e}")
     
-    # Calculate elapsed time
-    elapsed_time_seconds = (datetime.now() - BotTimes.task_start).seconds
+    # Calculate elapsed time (ensure elapsed_time_seconds is at least 1)
+    elapsed_time_seconds = max((datetime.now() - BotTimes.task_start).seconds, 1)
 
     # Format ETA in the desired format (e.g., "12s", "1m 28s")
     eta_formatted = getTime(int(eta) if eta.isdigit() else 0)
@@ -109,8 +109,12 @@ async def on_output(output: str):
     else:
         spd = 0
 
-    # Calculate current download speed
-    current_speed = (float(down) * 1024 ** spd) / elapsed_time_seconds
+    # Calculate current download speed (avoid division by zero)
+    if elapsed_time_seconds != 0:
+        current_speed = (float(down) * 1024 ** spd) / elapsed_time_seconds
+    else:
+        current_speed = 0
+
     speed_string = f"{sizeUnit(current_speed)}/s"
 
     await status_bar(
@@ -121,5 +125,4 @@ async def on_output(output: str):
         downloaded_bytes,
         total_size,
         "Aria2c 🧨",
-            )
-    
+    )
