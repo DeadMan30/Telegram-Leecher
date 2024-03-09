@@ -38,8 +38,6 @@ async def aria2_Download(link: str, num: int):
         if output == b"" and proc.poll() is not None:
             break
         if output:
-            # sys.stdout.write(output.decode("utf-8"))
-            # sys.stdout.flush()
             await on_output(output.decode("utf-8"))
 
     # Retrieve exit code and any error output
@@ -85,6 +83,10 @@ async def on_output(output: str):
             progress_percentage = parts[1].split("(")[1].split(")")[0]
             downloaded_bytes = parts[1].split("/")[0]
             eta = parts[3][4:]  # Extract the ETA value
+
+            if eta.endswith('s'):  # Check if ETA includes the unit 's' (seconds)
+                eta = eta[:-1]  # Remove 's' from ETA
+
     except Exception as e:
         logging.error(f"Couldn't get info due to: {e}")
     
@@ -92,7 +94,7 @@ async def on_output(output: str):
     elapsed_time_seconds = (datetime.now() - BotTimes.task_start).seconds
 
     # Format ETA in the desired format (e.g., "12s", "1m 28s")
-    eta_formatted = getTime(int(eta))
+    eta_formatted = getTime(int(eta) if eta.isdigit() else 0)
 
     percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # Extract the progress percentage
     down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # Extract the downloaded bytes
@@ -119,4 +121,5 @@ async def on_output(output: str):
         downloaded_bytes,
         total_size,
         "Aria2c 🧨",
-    )
+            )
+    
