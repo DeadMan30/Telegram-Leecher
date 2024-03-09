@@ -82,10 +82,12 @@ async def on_output(output: str):
             total_size = parts[1].split("/")[1].split("(")[0]
             progress_percentage = parts[1].split("(")[1].split(")")[0]
             downloaded_bytes = parts[1].split("/")[0]
-            eta = parts[3][4:]  # Extract the ETA value
-
-            if eta.endswith('s'):  # Check if ETA includes the unit 's' (seconds)
-                eta = eta[:-1]  # Remove 's' from ETA
+            
+            remaining_bytes = float(parts[7]) - float(parts[2])
+            bytes_per_second = float(parts[9][1:]) * (1024 if parts[10][-1] == 'K' else 1)  # Convert KB/s to bytes/s if necessary
+            if bytes_per_second != 0:
+                remaining_seconds = remaining_bytes / bytes_per_second
+                eta = getTime(remaining_seconds)
 
     except Exception as e:
         logging.error(f"Couldn't get info due to: {e}")
@@ -94,7 +96,7 @@ async def on_output(output: str):
     elapsed_time_seconds = max((datetime.now() - BotTimes.task_start).seconds, 1)
 
     # Format ETA in the desired format (e.g., "12s", "1m 28s")
-    eta_formatted = getTime(int(eta) if eta.isdigit() else 0)
+    eta_formatted = eta
 
     percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # Extract the progress percentage
     down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # Extract the downloaded bytes
