@@ -78,6 +78,8 @@ async def on_output(output: str):
     progress_percentage = "0B"
     downloaded_bytes = "0B"
     eta = "0S"
+    start_time = datetime.now()  # Track download start time
+
     try:
         if "ETA:" in output:
             parts = output.split()
@@ -85,13 +87,32 @@ async def on_output(output: str):
             total_size = total_size.split("(")[0]
             progress_percentage = parts[1][parts[1].find("(") + 1 : parts[1].find(")")]
             downloaded_bytes = parts[1].split("/")[0]
-            eta = parts[4].split(":")[1][:-1]
+
+            # Corrected ETA calculation:
+            eta_seconds = int(parts[4].split(":")[1][:-1])
+            eta = getTime(eta_seconds)  # Use the imported getTime function
+
     except Exception as do:
         logging.error(f"Could't Get Info Due to: {do}")
 
+    # Calculate elapsed time and update ETA if available
+    elapsed_time = datetime.now() - start_time
+    elapsed_time_seconds = elapsed_time.seconds
+
+    if total_size != "0B" and elapsed_time_seconds > 0:
+        # Calculate remaining bytes based on progress
+        remaining_bytes = int(total_size.split("B")[0]) - int(downloaded_bytes.split("B")[0])
+
+        # Only update ETA if download speed is positive to avoid division by zero
+        if remaining_bytes > 0:
+            download_speed = float(downloaded_bytes.split("B")[0]) / elapsed_time_seconds
+            estimated_time_remaining = remaining_bytes / download_speed
+            eta = getTime(estimated_time_remaining)
+
     percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # type: ignore
     down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # type: ignore
-    down_unit = re.findall("[a-zA-Z]+", downloaded_bytes)[0]
+    down_unit = re.findall("[a-zA-Z]+", downloaded_bytes)
+    
     if "G" in down_unit:
         spd = 3
     elif "M" in down_unit:
