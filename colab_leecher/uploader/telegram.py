@@ -1,6 +1,5 @@
 # copyright 2023 © Xron Trix | https://github.com/Xrontrix10
 
-
 import logging
 from PIL import Image
 from asyncio import sleep
@@ -12,17 +11,28 @@ from colab_leecher.utility.helper import sizeUnit, fileType, getTime, status_bar
 
 async def progress_bar(current, total):
     global status_msg, status_head
-    upload_speed = 4 * 1024 * 1024
+    upload_speed = 4 * 1024 * 1024  # Initial guess for upload speed
     elapsed_time_seconds = (datetime.now() - BotTimes.task_start).seconds
+
     if current > 0 and elapsed_time_seconds > 0:
         upload_speed = current / elapsed_time_seconds
-    eta = (Transfer.total_down_size - current - sum(Transfer.up_bytes)) / upload_speed
+
+    # Calculate remaining bytes to upload
+    remaining_bytes = Transfer.total_down_size - current - sum(Transfer.up_bytes)
+
+    if upload_speed > 0:
+        eta_seconds = remaining_bytes / upload_speed
+    else:
+        # If upload speed is 0, set ETA to 0
+        eta_seconds = 0
+
     percentage = (current + sum(Transfer.up_bytes)) / Transfer.total_down_size * 100
+
     await status_bar(
         down_msg=Messages.status_head,
         speed=f"{sizeUnit(upload_speed)}/s",
         percentage=percentage,
-        eta=getTime(eta),
+        eta=getTime(eta_seconds),
         done=sizeUnit(current + sum(Transfer.up_bytes)),
         left=sizeUnit(Transfer.total_down_size),
         engine="Pyrogram 💥",
