@@ -78,6 +78,7 @@ async def on_output(output: str):
     progress_percentage = "0B"
     downloaded_bytes = "0B"
     eta = "0S"
+
     try:
         if "ETA:" in output:
             parts = output.split()
@@ -85,7 +86,11 @@ async def on_output(output: str):
             total_size = total_size.split("(")[0]
             progress_percentage = parts[1][parts[1].find("(") + 1 : parts[1].find(")")]
             downloaded_bytes = parts[1].split("/")[0]
-            eta = parts[4].split(":")[1][:-1]
+
+            # Corrected ETA calculation:
+            eta_seconds = int(parts[4].split(":")[1][:-1])
+            eta = getTime(eta_seconds)  # Use the imported getTime function
+
     except Exception as do:
         logging.error(f"Could't Get Info Due to: {do}")
 
@@ -120,4 +125,4 @@ async def on_output(output: str):
             downloaded_bytes,
             total_size,
             "Aria2c 🧨",
-    )
+        )
