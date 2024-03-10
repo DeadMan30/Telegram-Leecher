@@ -102,11 +102,12 @@ async def on_output(output: str):
     if total_size != "0B" and elapsed_time_seconds > 0:
         # Calculate remaining bytes based on progress
         remaining_bytes = int(total_size.split("B")[0]) - int(downloaded_bytes.split("B")[0])
+        bytes_per_second = (float(down) * 1024**spd) / elapsed_time_seconds
 
         # Only update ETA if download speed is positive to avoid division by zero
         if remaining_bytes > 0:
             download_speed = float(downloaded_bytes.split("B")[0]) / elapsed_time_seconds
-            estimated_time_remaining = remaining_bytes / download_speed
+            estimated_time_remaining = remaining_bytes / bytes_per_second
             eta = getTime(estimated_time_remaining)
 
     percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # type: ignore
