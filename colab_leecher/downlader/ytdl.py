@@ -1,6 +1,5 @@
 # copyright 2023 © Xron Trix | https://github.com/Xrontrix10
 
-
 import logging
 import yt_dlp
 from asyncio import sleep
@@ -10,6 +9,31 @@ from colab_leecher.utility.handler import cancelTask
 from colab_leecher.utility.variables import YTDL, MSG, Messages, Paths
 from colab_leecher.utility.helper import getTime, keyboard, sizeUnit, status_bar, sysINFO
 
+# Fetch available formats for a given URL
+def get_video_formats(url):
+    ydl_opts = {
+        'quiet': True,
+        'skip_download': True,
+        'listformats': True,
+    }
+    
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        formats = info.get('formats', [])
+        
+    return formats
+
+# Create inline keyboard buttons for video quality selection
+def create_quality_buttons(formats):
+    keyboard = []
+    
+    for f in formats:
+        quality = f.get('format_note', 'Unknown')
+        button_text = f"{quality} ({f.get('height', 'N/A')}p)"
+        callback_data = f"{f.get('format_id')}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    return InlineKeyboardMarkup(keyboard)
 
 async def YTDL_Status(link, num):
     global Messages, YTDL
@@ -43,7 +67,6 @@ async def YTDL_Status(link, num):
 
         await sleep(2.5)
 
-
 class MyLogger:
     def __init__(self):
         pass
@@ -64,15 +87,14 @@ class MyLogger:
         # print(msg)
         pass
 
-
-def YouTubeDL(url):
+def YouTubeDL(url, format_id=None):
     global YTDL
 
     def my_hook(d):
         global YTDL
 
         if d["status"] == "downloading":
-            total_bytes = d.get("total_bytes", 0)  # Use 0 as default if total_bytes is None
+            total_bytes = d.get("total_bytes", 0)
             dl_bytes = d.get("downloaded_bytes", 0)
             percent = d.get("downloaded_percent", 0)
             speed = d.get("speed", "N/A")
@@ -89,24 +111,22 @@ def YouTubeDL(url):
             YTDL.left = sizeUnit(total_bytes) if total_bytes else "N/A"
 
         elif d["status"] == "downloading fragment":
-            # log_str = d["message"]
-            # print(log_str, end="")
             pass
         else:
             logging.info(d)
 
     ydl_opts = {
-        "format": "best",
+        "format": format_id or "best",
         "allow_multiple_video_streams": True,
         "allow_multiple_audio_streams": True,
         "writethumbnail": True,
-        "--concurrent-fragments": 4 , # Set the maximum number of concurrent fragments
+        "--concurrent-fragments": 4,
         "allow_playlist_files": True,
         "overwrites": True,
         "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
         "progress_hooks": [my_hook],
-        "writesubtitles": "srt",  # Enable subtitles download
-        "extractor_args": {"subtitlesformat": "srt"},  # Extract subtitles in SRT format
+        "writesubtitles": "srt",
+        "extractor_args": {"subtitlesformat": "srt"},
         "logger": MyLogger(),
     }
 
@@ -117,7 +137,7 @@ def YouTubeDL(url):
             info_dict = ydl.extract_info(url, download=False)
             YTDL.header = "⌛ __Please WAIT a bit...__"
             if "_type" in info_dict and info_dict["_type"] == "playlist":
-                playlist_name = info_dict["title"] 
+                playlist_name = info_dict["title"]
                 if not ospath.exists(ospath.join(Paths.down_path, playlist_name)):
                     makedirs(ospath.join(Paths.down_path, playlist_name))
                 ydl_opts["outtmpl"] = {
@@ -153,7 +173,6 @@ def YouTubeDL(url):
         except Exception as e:
             logging.error(f"YTDL ERROR: {e}")
 
-
 async def get_YT_Name(link):
     with yt_dlp.YoutubeDL({"logger": MyLogger()}) as ydl:
         try:
@@ -165,3 +184,21 @@ async def get_YT_Name(link):
         except Exception as e:
             await cancelTask(f"Can't Download from this link. Because: {str(e)}")
             return "UNKNOWN DOWNLOAD NAME"
+
+# Pyrogram handler functions
+async def start(link):
+    formats = get_video_formats(link)
+    buttons = create_quality_buttons(formats)
+    await message.reply_text('Choose video quality:', reply_markup=buttons, quote=True)
+
+async def handle_quality_selection(callback_query):
+    url = callback_query.message.reply_to_message.text.split('URL: ')[-1]
+    format_id = callback_query.data
+    
+    formats = get_video_formats(url)
+    format_to_download = next(f for f in formats if f.get('format_id') == format_id)
+    
+    YouTubeDL(link, format_id=format_id)
+    
+    await callback_query.answer()
+    await callback_query.message.reply_text("Download complete!")
