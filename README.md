@@ -34,6 +34,7 @@
 - Download Directly To Google Drive / Mirroring
 - Zip Folders/Files
 - Split support for all files > 2GB/4GB
+- Raw Byte Splitting For Oversized Videos ( Exact Size Parts, Rejoin With `cat` )
 
 ## **🔗 Supported Links**
 
@@ -64,7 +65,7 @@
 
 ## **🚨 NOTE:**
 
-- Video Splitting is intentionally disabled to avoid video corruptions. Instead, they are zipped if they exceed MAX_UPLOAD_SIZE
+- Video Splitting Has Two Modes, Choose in `/settings` » Video Settings » `Split by Bytes` ( raw chunks, uploaded as documents ) or `Split by FFmpeg` ( remuxed segments )
 <!-- - Magnet or Torrent Links are supported, But avoid using, because `Google Colab Strictly Prohibits Torrents` -->
 - Downloading `YouTube Video without permission of the owner` can lead to copyright issues. Use with Caution
 

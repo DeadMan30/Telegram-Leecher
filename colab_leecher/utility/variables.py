@@ -15,6 +15,7 @@ class BOT:
         convert_quality = "Low"
         caption = "Monospace"
         split_video = "Split Videos"
+        split_method = "FFmpeg Segments"
         prefix = ""
         suffix = ""
         thumbnail = False
@@ -24,6 +25,7 @@ class BOT:
         convert_video = True
         convert_quality = False
         is_split = True
+        raw_split = False
         caption = "code"
         video_out = "mp4"
         custom_name = ""

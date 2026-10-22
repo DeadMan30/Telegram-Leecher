@@ -189,6 +189,10 @@ async def handle_options(client, callback_query):
                     InlineKeyboardButton("Zip Videos", callback_data="split-false"),
                 ],
                 [
+                    InlineKeyboardButton("Split by Bytes", callback_data="rawsplit-true"),
+                    InlineKeyboardButton("Split by FFmpeg", callback_data="rawsplit-false"),
+                ],
+                [
                     InlineKeyboardButton("Convert", callback_data="convert-true"),
                     InlineKeyboardButton(
                         "Don't Convert", callback_data="convert-false"
@@ -205,8 +209,14 @@ async def handle_options(client, callback_query):
                 [InlineKeyboardButton("Back ⏎", callback_data="back")],
             ]
         )
+        text = f"CHOOSE YOUR DESIRED OPTION ⚙️ »\n\n╭⌬ CONVERT » <code>{BOT.Setting.convert_video}</code>"
+        text += f"\n├⌬ SPLIT » <code>{BOT.Setting.split_video}</code>"
+        text += f"\n├⌬ SPLIT METHOD » <code>{BOT.Setting.split_method}</code>"
+        text += f"\n├⌬ OUTPUT FORMAT » <code>{BOT.Options.video_out}</code>"
+        text += f"\n╰⌬ OUTPUT QUALITY » <code>{BOT.Setting.convert_quality}</code>"
+        text += "\n\n<i>Raw Bytes: exact ≤2000 MB parts, uploaded as documents (rejoin: cat file.* > file)</i>"
         await callback_query.message.edit_text(
-            f"CHOOSE YOUR DESIRED OPTION ⚙️ »\n\n╭⌬ CONVERT » <code>{BOT.Setting.convert_video}</code>\n├⌬ SPLIT » <code>{BOT.Setting.split_video}</code>\n├⌬ OUTPUT FORMAT » <code>{BOT.Options.video_out}</code>\n╰⌬ OUTPUT QUALITY » <code>{BOT.Setting.convert_quality}</code>",
+            text,
             reply_markup=keyboard,
         )
     elif callback_query.data == "caption":
@@ -277,6 +287,14 @@ async def handle_options(client, callback_query):
         BOT.Options.is_split = True if callback_query.data == "split-true" else False
         BOT.Setting.split_video = (
             "Split Videos" if callback_query.data == "split-true" else "Zip Videos"
+        )
+        await send_settings(
+            client, callback_query.message, callback_query.message.id, False
+        )
+    elif callback_query.data in ["rawsplit-true", "rawsplit-false"]:
+        BOT.Options.raw_split = callback_query.data == "rawsplit-true"
+        BOT.Setting.split_method = (
+            "Raw Bytes" if BOT.Options.raw_split else "FFmpeg Segments"
         )
         await send_settings(
             client, callback_query.message, callback_query.message.id, False

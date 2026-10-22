@@ -23,6 +23,11 @@ from colab_leecher.utility.helper import (
     sysINFO,
     getTime,
 )
+from colab_leecher.utility.splitter import split_by_bytes
+
+
+# telegram bot api limit per file
+MAX_UPLOAD_SIZE = 2097152000
 
 
 async def videoConverter(file: str):
@@ -111,7 +116,7 @@ async def videoConverter(file: str):
 
 async def sizeChecker(file_path, remove: bool):
     global Paths
-    max_size = 2097152000  # 2 GB
+    max_size = MAX_UPLOAD_SIZE
     file_size = os.stat(file_path).st_size
 
     if file_size > max_size:
@@ -130,8 +135,11 @@ async def sizeChecker(file_path, remove: bool):
         else:
             f_type = fileType(file_path)
             if f_type == "video" and BOT.Options.is_split:
-                # TODO: Store the size in a constant variable
-                await splitVideo(file_path, 2000, remove)
+                if BOT.Options.raw_split:
+                    await splitVideoRaw(file_path, max_size, remove)
+                else:
+                    # splitVideo takes MB, not bytes
+                    await splitVideo(file_path, max_size // (1024 * 1024), remove)
             else:
                 await archive(file_path, True, remove)
             await sleep(2)
@@ -257,42 +265,25 @@ async def extract(zip_filepath, remove: bool):
 async def splitArchive(file_path, max_size):
     global Paths, BOT, MSG, Messages
     _, filename = ospath.split(file_path)
-    new_path = f"{Paths.temp_zpath}/{filename}"
     Messages.status_head = f"<b>✂️ SPLITTING » </b>\n\n<code>{filename}</code>\n"
-    # Get the total size of the file
     total_size = ospath.getsize(file_path)
 
     BotTimes.task_start = datetime.now()
 
-    with open(file_path, "rb") as f:
-        chunk = f.read(max_size)
-        i = 1
-        bytes_written = 0
-        while chunk:
-            # Generate filename for this chunk
-            ext = str(i).zfill(3)
-            output_filename = "{}.{}".format(new_path, ext)
-
-            # Write chunk to file
-            with open(output_filename, "wb") as out:
-                out.write(chunk)
-
-            bytes_written += len(chunk)
-            speed_string, eta, percentage = speedETA(
-                BotTimes.task_start, bytes_written, total_size
-            )
-            await status_bar(
-                Messages.status_head,
-                speed_string,
-                percentage,
-                getTime(eta),
-                sizeUnit(bytes_written),
-                sizeUnit(total_size),
-                "Xr-Split ✂️",
-            )
-            # Get next chunk
-            chunk = f.read(max_size)
-            i += 1  # Increment chunk counter
+    # same chunker as raw video split, keeps memory flat
+    for _, _part_path, written in split_by_bytes(file_path, Paths.temp_zpath, max_size):
+        speed_string, eta, percentage = speedETA(
+            BotTimes.task_start, written, total_size
+        )
+        await status_bar(
+            Messages.status_head,
+            speed_string,
+            percentage,
+            getTime(eta),
+            sizeUnit(written),
+            sizeUnit(total_size),
+            "Xr-Split ✂️",
+        )
 
 
 async def splitVideo(file_path, max_size, remove: bool):
@@ -345,3 +336,37 @@ async def splitVideo(file_path, max_size, remove: bool):
 
     if remove:
         os.remove(file_path)
+
+
+async def splitVideoRaw(file_path, max_size, remove: bool):
+    global Paths, BOT, MSG, Messages
+    _, filename = ospath.split(file_path)
+    Messages.status_head = f"<b>✂️ SPLITTING » </b>\n\n<code>{filename}</code>\n"
+    BotTimes.task_start = datetime.now()
+
+    total_size = getSize(file_path)
+    total_in_unit = sizeUnit(total_size)
+    parts = []
+
+    # byte exact chunks, no ffmpeg needed
+    for _, part_path, written in split_by_bytes(file_path, Paths.temp_zpath, max_size):
+        parts.append(part_path)
+        speed_string, eta, percentage = speedETA(
+            BotTimes.task_start, written, total_size
+        )
+        await status_bar(
+            Messages.status_head,
+            speed_string,
+            percentage,
+            getTime(eta),
+            sizeUnit(written),
+            total_in_unit,
+            "Xr-RawSplit ✂️",
+        )
+        # yield so cancel and status edits stay responsive
+        await sleep(0)
+
+    if remove and ospath.exists(file_path):
+        os.remove(file_path)
+
+    return parts
