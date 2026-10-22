@@ -25,7 +25,7 @@ async def progress_bar(current, total):
         eta=getTime(eta),
         done=sizeUnit(current + sum(Transfer.up_bytes)),
         left=sizeUnit(Transfer.total_down_size),
-        engine="Pyrofork 💥",
+        engine="Wzgram 💥",
     )
 
 
@@ -37,69 +37,70 @@ async def upload_file(file_path, real_name):
 
     f_type = type_ if BOT.Options.stream_upload else "document"
 
-    # Upload the file
-    try:
-        if f_type == "video":
-            # For Renaming to mp4
-            if not BOT.Options.stream_upload:
-                file_path = videoExtFix(file_path)
-            # Generate Thumbnail and Get Duration
-            thmb_path, seconds = thumbMaintainer(file_path)
-            with Image.open(thmb_path) as img:
-                width, height = img.size
+    while True:
+        try:
+            if f_type == "video":
+                # For Renaming to mp4
+                if not BOT.Options.stream_upload:
+                    file_path = videoExtFix(file_path)
+                # Generate Thumbnail and Get Duration
+                thmb_path, seconds = thumbMaintainer(file_path)
+                with Image.open(thmb_path) as img:
+                    width, height = img.size
 
-            MSG.sent_msg = await MSG.sent_msg.reply_video(
-                video=file_path,
-                supports_streaming=True,
-                width=width,
-                height=height,
-                caption=caption,
-                thumb=thmb_path,
-                duration=int(seconds),
-                progress=progress_bar,
-                reply_to_message_id=MSG.sent_msg.id,
-            )
+                MSG.sent_msg = await MSG.sent_msg.reply_video(
+                    video=file_path,
+                    supports_streaming=True,
+                    width=width,
+                    height=height,
+                    caption=caption,
+                    thumb=thmb_path,
+                    duration=int(seconds),
+                    progress=progress_bar,
+                    reply_to_message_id=MSG.sent_msg.id,
+                )
 
-        elif f_type == "audio":
-            thmb_path = None if not ospath.exists(Paths.THMB_PATH) else Paths.THMB_PATH
-            MSG.sent_msg = await MSG.sent_msg.reply_audio(
-                audio=file_path,
-                caption=caption,
-                thumb=thmb_path,  # type: ignore
-                progress=progress_bar,
-                reply_to_message_id=MSG.sent_msg.id,
-            )
+            elif f_type == "audio":
+                thmb_path = None if not ospath.exists(Paths.THMB_PATH) else Paths.THMB_PATH
+                MSG.sent_msg = await MSG.sent_msg.reply_audio(
+                    audio=file_path,
+                    caption=caption,
+                    thumb=thmb_path,  # type: ignore
+                    progress=progress_bar,
+                    reply_to_message_id=MSG.sent_msg.id,
+                )
 
-        elif f_type == "document":
-            if ospath.exists(Paths.THMB_PATH):
-                thmb_path = Paths.THMB_PATH
-            elif type_ == "video":
-                thmb_path, _ = thumbMaintainer(file_path)
-            else:
-                thmb_path = None
+            elif f_type == "document":
+                if ospath.exists(Paths.THMB_PATH):
+                    thmb_path = Paths.THMB_PATH
+                elif type_ == "video":
+                    thmb_path, _ = thumbMaintainer(file_path)
+                else:
+                    thmb_path = None
 
-            MSG.sent_msg = await MSG.sent_msg.reply_document(
-                document=file_path,
-                caption=caption,
-                thumb=thmb_path,  # type: ignore
-                progress=progress_bar,
-                reply_to_message_id=MSG.sent_msg.id,
-            )
+                MSG.sent_msg = await MSG.sent_msg.reply_document(
+                    document=file_path,
+                    caption=caption,
+                    thumb=thmb_path,  # type: ignore
+                    progress=progress_bar,
+                    reply_to_message_id=MSG.sent_msg.id,
+                )
 
-        elif f_type == "photo":
-            MSG.sent_msg = await MSG.sent_msg.reply_photo(
-                photo=file_path,
-                caption=caption,
-                progress=progress_bar,
-                reply_to_message_id=MSG.sent_msg.id,
-            )
+            elif f_type == "photo":
+                MSG.sent_msg = await MSG.sent_msg.reply_photo(
+                    photo=file_path,
+                    caption=caption,
+                    progress=progress_bar,
+                    reply_to_message_id=MSG.sent_msg.id,
+                )
 
-        Transfer.sent_file.append(MSG.sent_msg)
-        Transfer.sent_file_names.append(real_name)
+            Transfer.sent_file.append(MSG.sent_msg)
+            Transfer.sent_file_names.append(real_name)
+            break
 
-    except FloodWait as e:
-        logging.warning(f"FloodWait: Waiting {e.value} Seconds Before Trying Again.")
-        await sleep(e.value)  # Wait dynamic FloodWait seconds before Trying Again
-        await upload_file(file_path, real_name)
-    except Exception as e:
-        logging.error(f"Error When Uploading : {e}")
+        except FloodWait as e:
+            logging.warning(f"FloodWait: Waiting {e.value} Seconds Before Trying Again.")
+            await sleep(e.value)
+        except Exception as e:
+            logging.error(f"Error When Uploading : {e}")
+            break

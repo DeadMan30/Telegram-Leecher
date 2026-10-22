@@ -11,7 +11,6 @@ from asyncio import sleep
 from threading import Thread
 from datetime import datetime
 from os import makedirs, path as ospath
-from moviepy.editor import VideoFileClip as VideoClip
 from colab_leecher.utility.variables import BOT, MSG, BotTimes, Paths, Messages
 from colab_leecher.utility.helper import (
     getSize,
@@ -30,13 +29,13 @@ async def videoConverter(file: str):
     global BOT, MSG, BotTimes
 
     def convert_to_mp4(input_file, out_file):
-        clip = VideoClip(input_file)
-        clip.write_videofile(
-            out_file,
-            codec="libx264",
-            audio_codec="aac",
-            ffmpeg_params=["-strict", "-2"],
+        # Direct ffmpeg fallback
+        # Initial hw-accel fallback via libx264
+        cmd = (
+            f'ffmpeg -y -i "{input_file}" '
+            f'-c:v libx264 -preset medium -c:a aac -strict -2 "{out_file}"'
         )
+        subprocess.run(cmd, shell=True, capture_output=True)
 
     async def msg_updater(c: int, tr, engine: str):
         global Messages
@@ -86,11 +85,11 @@ async def videoConverter(file: str):
         Err = True
 
     if Err:
-        proc = Thread(target=convert_to_mp4, name="Moviepy", args=(file, out_file))
+        proc = Thread(target=convert_to_mp4, name="FFmpeg", args=(file, out_file))
         proc.start()
         core = "CPU"
         while proc.is_alive():  # Until ytdl is downloading
-            await msg_updater(c, "2nd", "Moviepy 🛵")
+            await msg_updater(c, "2nd", "FFmpeg-CPU 🛵")
             c = (c + 1) % 12
             await sleep(3)
 

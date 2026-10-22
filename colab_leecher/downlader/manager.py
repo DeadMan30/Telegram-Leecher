@@ -4,12 +4,11 @@
 import logging
 from natsort import natsorted
 from datetime import datetime
-from asyncio import sleep, get_running_loop
+from asyncio import sleep
 from colab_leecher.downlader.mega import megadl
 from colab_leecher.utility.handler import cancelTask
 from colab_leecher.downlader.terabox import terabox_download
 from colab_leecher.downlader.ytdl import YTDL_Status, get_YT_Name
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from colab_leecher.downlader.aria2 import aria2_Download, get_Aria2c_Name
 from colab_leecher.downlader.telegram import TelegramDownload, media_Identifier
 from colab_leecher.utility.variables import (
@@ -77,8 +76,6 @@ async def downloadManager(source, is_ytdl: bool):
                     while not isYtdlComplete():
                         await sleep(2)
                 elif is_mega(link):
-                    executor = ProcessPoolExecutor()
-                    # await loop.run_in_executor(executor, megadl, link, i + 1)
                     await megadl(link, i + 1)
                 elif is_terabox(link):
                     tera_dn = f"<b>PLEASE WAIT ⌛</b>\n\n__Generating Download Link For__\n\n<code>{link}</code>"

@@ -2,6 +2,8 @@
 
 
 import os
+import json
+import subprocess
 import math
 import psutil
 import logging
@@ -10,10 +12,9 @@ from PIL import Image
 from os import path as ospath
 from datetime import datetime
 from urllib.parse import urlparse
-from asyncio import get_event_loop
+from asyncio import get_running_loop
 from colab_leecher import colab_bot
 from pyrogram.errors import BadRequest
-from moviepy.video.io.VideoFileClip import VideoFileClip
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from colab_leecher.utility.variables import (
     BOT,
@@ -175,14 +176,39 @@ def thumbMaintainer(file_path):
     try:
         fname, _ = ospath.splitext(ospath.basename(file_path))
         ytdl_thmb = f"{Paths.WORK_PATH}/ytdl_thumbnails/{fname}.webp"
-        with VideoFileClip(file_path) as video:
-            if ospath.exists(Paths.THMB_PATH):
-                return Paths.THMB_PATH, video.duration
-            elif ospath.exists(ytdl_thmb):
-                return convertIMG(ytdl_thmb), video.duration
-            else:
-                video.save_frame(Paths.VIDEO_FRAME, t=math.floor(video.duration / 2))
-                return Paths.VIDEO_FRAME, video.duration
+        # Duration via ffprobe (same pattern as splitVideo); frame via ffmpeg.
+        # Extracts duration via ffprobe and preview frame via ffmpeg.
+        # No external heavy video framework required.
+        probe = subprocess.run(
+            [
+                "ffprobe", "-v", "quiet", "-print_format", "json",
+                "-show_format", file_path,
+            ],
+            capture_output=True,
+        )
+        duration = 0.0
+        try:
+            duration = float(json.loads(probe.stdout)["format"]["duration"])
+        except (KeyError, ValueError, json.JSONDecodeError):
+            pass
+        if ospath.exists(Paths.THMB_PATH):
+            return Paths.THMB_PATH, duration
+        if ospath.exists(ytdl_thmb):
+            return convertIMG(ytdl_thmb), duration
+        if duration > 0:
+            seek = math.floor(duration / 2)
+            subprocess.run(
+                [
+                    "ffmpeg", "-y", "-ss", str(seek), "-i", file_path,
+                    "-frames:v", "1", "-q:v", "2", Paths.VIDEO_FRAME,
+                ],
+                capture_output=True,
+            )
+        if ospath.exists(Paths.VIDEO_FRAME) and os.stat(Paths.VIDEO_FRAME).st_size > 0:
+            return Paths.VIDEO_FRAME, duration
+        if ospath.exists(Paths.THMB_PATH):
+            return Paths.THMB_PATH, 0
+        return Paths.HERO_IMAGE, 0
     except Exception as e:
         print(f"Thmb Gen ERROR: {e}")
         if ospath.exists(Paths.THMB_PATH):
@@ -195,7 +221,7 @@ async def setThumbnail(message):
     try:
         if ospath.exists(Paths.THMB_PATH):
             os.remove(Paths.THMB_PATH)
-        event_loop = get_event_loop()
+        event_loop = get_running_loop()
         th_set = event_loop.create_task(message.download(file_name=Paths.THMB_PATH)) 
         await th_set
         BOT.Setting.thumbnail = True

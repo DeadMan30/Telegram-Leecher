@@ -74,7 +74,7 @@ def YouTubeDL(url):
         if d["status"] == "downloading":
             total_bytes = d.get("total_bytes", 0)  # Use 0 as default if total_bytes is None
             dl_bytes = d.get("downloaded_bytes", 0)
-            percent = d.get("downloaded_percent", 0)
+            percent = 0  # computed below from bytes; "downloaded_percent" is not a real hook key
             speed = d.get("speed", "N/A")
             eta = d.get("eta", 0)
 
@@ -96,17 +96,18 @@ def YouTubeDL(url):
             logging.info(d)
 
     ydl_opts = {
-        "format": "best",
+        "format": "bestvideo*+bestaudio/best",
+        "merge_output_format": "mp4",
         "allow_multiple_video_streams": True,
         "allow_multiple_audio_streams": True,
         "writethumbnail": True,
-        "--concurrent-fragments": 4 , # Set the maximum number of concurrent fragments
+        "concurrent_fragment_downloads": 4,  # max concurrent fragment downloads
         "allow_playlist_files": True,
         "overwrites": True,
         "postprocessors": [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
         "progress_hooks": [my_hook],
-        "writesubtitles": "srt",  # Enable subtitles download
-        "extractor_args": {"subtitlesformat": "srt"},  # Extract subtitles in SRT format
+        "writesubtitles": True,  # Enable subtitles download
+        "subtitlesformat": "srt/best",  # Prefer SRT subtitles
         "logger": MyLogger(),
     }
 
@@ -129,7 +130,7 @@ def YouTubeDL(url):
                     try:
                         ydl.download([video_url])
                     except yt_dlp.utils.DownloadError as e:
-                        if e.exc_info[0] == 36:
+                        if getattr(e, "exc_info", None) and getattr(e.exc_info[0], "errno", None) == 36:
                             ydl_opts["outtmpl"] = {
                                 "default": f"{Paths.down_path}/%(id)s.%(ext)s",
                                 "thumbnail": f"{Paths.thumbnail_ytdl}/%(id)s.%(ext)s",
@@ -144,7 +145,7 @@ def YouTubeDL(url):
                 try:
                     ydl.download([url])
                 except yt_dlp.utils.DownloadError as e:
-                    if e.exc_info[0] == 36:
+                    if getattr(e, "exc_info", None) and getattr(e.exc_info[0], "errno", None) == 36:
                         ydl_opts["outtmpl"] = {
                             "default": f"{Paths.down_path}/%(id)s.%(ext)s",
                             "thumbnail": f"{Paths.thumbnail_ytdl}/%(id)s.%(ext)s",

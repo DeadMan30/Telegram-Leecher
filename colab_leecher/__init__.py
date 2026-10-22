@@ -1,8 +1,13 @@
 # copyright 2023 © Xron Trix | https://github.com/Xrontrix10
 
 import logging, json
-from uvloop import install
 from pyrogram.client import Client
+
+try:
+    from uvloop import install
+    install()
+except ImportError:
+    pass
 
 # Read the dictionary from the txt file
 with open("/content/Telegram-Leecher/credentials.json", "r") as file:
@@ -16,7 +21,5 @@ DUMP_ID = credentials["DUMP_ID"]
 
 
 logging.basicConfig(level=logging.INFO)
-
-install()
 
 colab_bot = Client("my_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)

@@ -89,9 +89,14 @@ async def on_output(output: str):
     except Exception as do:
         logging.error(f"Could't Get Info Due to: {do}")
 
-    percentage = re.findall("\d+\.\d+|\d+", progress_percentage)[0]  # type: ignore
-    down = re.findall("\d+\.\d+|\d+", downloaded_bytes)[0]  # type: ignore
-    down_unit = re.findall("[a-zA-Z]+", downloaded_bytes)[0]
+    try:
+        percentage = re.findall(r"\d+\.\d+|\d+", progress_percentage)[0]  # type: ignore
+        down = re.findall(r"\d+\.\d+|\d+", downloaded_bytes)[0]  # type: ignore
+        down_unit = re.findall(r"[a-zA-Z]+", downloaded_bytes)[0]
+    except (IndexError, ValueError) as err:
+        logging.warning(f"Could not parse aria2 progress line: {err}")
+        # Skip malformed output instead of crashing task mid-stream
+        return
     if "G" in down_unit:
         spd = 3
     elif "M" in down_unit:

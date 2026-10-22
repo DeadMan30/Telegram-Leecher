@@ -4,7 +4,7 @@
 import logging, os
 from pyrogram import filters
 from datetime import datetime
-from asyncio import sleep, get_event_loop
+from asyncio import sleep, get_running_loop
 from colab_leecher import colab_bot, OWNER
 from colab_leecher.utility.handler import cancelTask
 from .utility.variables import BOT, MSG, BotTimes, Paths
@@ -176,7 +176,7 @@ async def handle_options(client, callback_query):
         BOT.State.task_going = True
         BOT.State.started = False
         BotTimes.start_time = datetime.now()
-        event_loop = get_event_loop()
+        event_loop = get_running_loop()
         BOT.TASK = event_loop.create_task(taskScheduler())  # type: ignore
         await BOT.TASK
         BOT.State.task_going = False
@@ -345,7 +345,7 @@ async def handle_options(client, callback_query):
         BOT.State.task_going = True
         BOT.State.started = False
         BotTimes.start_time = datetime.now()
-        event_loop = get_event_loop()
+        event_loop = get_running_loop()
         BOT.TASK = event_loop.create_task(taskScheduler())  # type: ignore
         await BOT.TASK
         BOT.State.task_going = False

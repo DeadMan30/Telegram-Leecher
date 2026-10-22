@@ -9,6 +9,7 @@
 
 # @markdown <br>
 
+REPO_URL = "https://github.com/XronTrix10/Telegram-Leecher"  # @param {type: "string"}
 API_ID = 0  # @param {type: "integer"}
 API_HASH = ""  # @param {type: "string"}
 BOT_TOKEN = ""  # @param {type: "string"}
@@ -58,6 +59,16 @@ def Loading():
 _Thread = Thread(target=Loading, name="Prepare", args=())
 _Thread.start()
 
+# Audio keep-alive thread to prevent Google Colab timeout
+def audio_keep_alive():
+    try:
+        from IPython.display import Audio, display
+        display(Audio("https://raw.githubusercontent.com/KoboldAI/KoboldAI-Client/main/colab/silence.m4a", autoplay=True, loop=True))
+    except Exception:
+        pass
+
+Thread(target=audio_keep_alive, name="AudioKeepAlive", daemon=True).start()
+
 if len(str(DUMP_ID)) == 10 and "-100" not in str(DUMP_ID):
     n_dump = "-100" + str(DUMP_ID)
     DUMP_ID = int(n_dump)
@@ -65,9 +76,14 @@ if len(str(DUMP_ID)) == 10 and "-100" not in str(DUMP_ID):
 if os.path.exists("/content/sample_data"):
     shutil.rmtree("/content/sample_data")
 
-cmd = "git clone https://github.com/XronTrix10/Telegram-Leecher"
-proc = subprocess.run(cmd, shell=True)
-cmd = "apt update && apt install ffmpeg aria2"
+if not os.path.exists("/content/Telegram-Leecher"):
+    cmd = f"git clone {REPO_URL} /content/Telegram-Leecher"
+    proc = subprocess.run(cmd, shell=True)
+else:
+    cmd = "cd /content/Telegram-Leecher && git pull"
+    proc = subprocess.run(cmd, shell=True)
+
+cmd = "apt update -y && apt install -y ffmpeg aria2 megatools"
 proc = subprocess.run(cmd, shell=True)
 cmd = "pip3 install -r /content/Telegram-Leecher/requirements.txt"
 proc = subprocess.run(cmd, shell=True)
@@ -90,4 +106,7 @@ if os.path.exists("/content/Telegram-Leecher/my_bot.session"):
     
 print("\rStarting Bot....")
 
-!cd /content/Telegram-Leecher/ && python3 -m colab_leecher #type:ignore
+try:
+    get_ipython().system("cd /content/Telegram-Leecher/ && python3 -m colab_leecher")
+except NameError:
+    os.system("cd /content/Telegram-Leecher/ && python3 -m colab_leecher")
