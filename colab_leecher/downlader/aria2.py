@@ -62,9 +62,9 @@ async def aria2_Download(link: str, num: int):
 def get_Aria2c_Name(link):
     if len(BOT.Options.custom_name) != 0:
         return BOT.Options.custom_name
-    cmd = f'aria2c -x10 --dry-run --file-allocation=none "{link}"'
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True)
-    stdout_str = result.stdout.decode("utf-8")
+    cmd = ["aria2c", "-x10", "--dry-run", "--file-allocation=none", link]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    stdout_str = result.stdout.decode("utf-8", errors="replace")
     filename = stdout_str.split("complete: ")[-1].split("\n")[0]
     name = filename.split("/")[-1]
     if len(name) == 0:

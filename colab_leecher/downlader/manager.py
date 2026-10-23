@@ -21,6 +21,7 @@ from colab_leecher.utility.variables import (
     BotTimes,
 )
 from colab_leecher.utility.helper import (
+    fit_caption,
     isYtdlComplete,
     keyboard,
     sysINFO,
@@ -39,6 +40,11 @@ from colab_leecher.downlader.gdrive import (
 )
 
 
+def shortLink(link: str, size: int = 60) -> str:
+    # shorten link for status caption
+    return link if len(link) <= size else f"{link[:size]}…"
+
+
 async def downloadManager(source, is_ytdl: bool):
     message = "\n<b>Please Wait...</b> ⏳\n<i>Merging YTDL Video...</i> 🐬"
     BotTimes.task_start = datetime.now()
@@ -47,7 +53,7 @@ async def downloadManager(source, is_ytdl: bool):
             await YTDL_Status(link, i + 1)
         try:
             await MSG.status_msg.edit_text(
-                text=Messages.task_msg + Messages.status_head + message + sysINFO(),
+                text=fit_caption(Messages.task_msg + Messages.status_head + message + sysINFO()),
                 reply_markup=keyboard(),
             )
         except Exception:
@@ -65,10 +71,10 @@ async def downloadManager(source, is_ytdl: bool):
                     await YTDL_Status(link, i + 1)
                     try:
                         await MSG.status_msg.edit_text(
-                            text=Messages.task_msg
+                            text=fit_caption(Messages.task_msg
                             + Messages.status_head
                             + message
-                            + sysINFO(),
+                            + sysINFO()),
                             reply_markup=keyboard(),
                         )
                     except Exception:
@@ -78,20 +84,20 @@ async def downloadManager(source, is_ytdl: bool):
                 elif is_mega(link):
                     await megadl(link, i + 1)
                 elif is_terabox(link):
-                    tera_dn = f"<b>PLEASE WAIT ⌛</b>\n\n__Generating Download Link For__\n\n<code>{link}</code>"
+                    tera_dn = f"<b>PLEASE WAIT ⌛</b>\n\n__Generating Download Link For__\n\n<code>{shortLink(link)}</code>"
                     try:
                         await MSG.status_msg.edit_text(
-                            text=tera_dn + sysINFO(), reply_markup=keyboard()
+                            text=fit_caption(tera_dn + sysINFO()), reply_markup=keyboard()
                         )
                     except Exception as e1:
                         print(f"Couldn't Update text ! Because: {e1}")
 
                     await terabox_download(link, i + 1)
                 else:
-                    aria2_dn = f"<b>PLEASE WAIT ⌛</b>\n\n__Getting Download Info For__\n\n<code>{link}</code>"
+                    aria2_dn = f"<b>PLEASE WAIT ⌛</b>\n\n__Getting Download Info For__\n\n<code>{shortLink(link)}</code>"
                     try:
                         await MSG.status_msg.edit_text(
-                            text=aria2_dn + sysINFO(), reply_markup=keyboard()
+                            text=fit_caption(aria2_dn + sysINFO()), reply_markup=keyboard()
                         )
                     except Exception as e1:
                         print(f"Couldn't Update text ! Because: {e1}")

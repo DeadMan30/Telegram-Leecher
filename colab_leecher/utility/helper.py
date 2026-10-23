@@ -1,7 +1,7 @@
 # copyright 2024 © Xron Trix | https://github.com/Xrontrix10
 
 
-import os
+import os, re
 import json
 import subprocess
 import math
@@ -410,6 +410,76 @@ async def send_settings(client, message, msg_id, command: bool):
         logging.error(f"Error Modifying message | {error}")
 
 
+TAG_REGEX = re.compile(r"<\s*(/)?\s*([a-zA-Z0-9]+)(?:\s+[^>]*)?>")
+
+
+# keep captions under 1024 chars and close open html tags
+def fit_caption(text: str, limit: int = 1024) -> str:
+    if not text or len(text) <= limit:
+        return text
+
+    ellipsis = "…"
+    target_limit = limit - len(ellipsis)
+
+    lines = text.split("\n")
+    kept = []
+    cur_len = 0
+
+    for line in lines:
+        added = len(line) + (1 if kept else 0)
+        if cur_len + added > target_limit:
+            break
+        kept.append(line)
+        cur_len += added
+
+    if not kept:
+        candidate = text[:target_limit]
+    else:
+        candidate = "\n".join(kept)
+
+    # remove partial tag at end if cut off
+    last_open = candidate.rfind("<")
+    last_close = candidate.rfind(">")
+    if last_open > last_close:
+        candidate = candidate[:last_open]
+
+    candidate = candidate.rstrip()
+
+    stack = []
+    for match in TAG_REGEX.finditer(candidate):
+        is_closing = bool(match.group(1))
+        tag_name = match.group(2).lower()
+        if is_closing:
+            if stack and stack[-1] == tag_name:
+                stack.pop()
+        else:
+            stack.append(tag_name)
+
+    closing_tags = "".join(f"</{t}>" for t in reversed(stack))
+
+    while len(candidate) + len(ellipsis) + len(closing_tags) > limit and candidate:
+        if "\n" in candidate:
+            candidate = candidate.rsplit("\n", 1)[0].rstrip()
+        else:
+            candidate = candidate[:-1].rstrip()
+        lo = candidate.rfind("<")
+        lc = candidate.rfind(">")
+        if lo > lc:
+            candidate = candidate[:lo].rstrip()
+        stack = []
+        for match in TAG_REGEX.finditer(candidate):
+            is_closing = bool(match.group(1))
+            tag_name = match.group(2).lower()
+            if is_closing:
+                if stack and stack[-1] == tag_name:
+                    stack.pop()
+            else:
+                stack.append(tag_name)
+        closing_tags = "".join(f"</{t}>" for t in reversed(stack))
+
+    return candidate + ellipsis + closing_tags
+
+
 async def status_bar(down_msg, speed, percentage, eta, done, left, engine):
     bar_length = 12
     filled_length = int(percentage / 100 * bar_length)
@@ -424,12 +494,12 @@ async def status_bar(down_msg, speed, percentage, eta, done, left, engine):
         # Edit the message with updated progress information.
         if isTimeOver():
             await MSG.status_msg.edit_text(
-                text=Messages.task_msg + down_msg + text + sysINFO(),
+                text=fit_caption(Messages.task_msg + down_msg + text + sysINFO()),
                 disable_web_page_preview=True,
                 reply_markup=keyboard(),
             )
     except BadRequest as e:
-        logging.error(f"Same Status Not Modified: {str(e)}")
+        logging.error(f"Status Caption Edit Failed: {str(e)}")
     except Exception as e:
         # Catch any exceptions that might occur while editing the message.
         logging.error(f"Error Updating Status bar: {str(e)}")

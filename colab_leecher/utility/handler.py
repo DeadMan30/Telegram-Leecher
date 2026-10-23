@@ -28,6 +28,7 @@ from colab_leecher.utility.converters import (
     sizeChecker,
 )
 from colab_leecher.utility.helper import (
+    fit_caption,
     fileType,
     getSize,
     getTime,
@@ -73,10 +74,10 @@ async def Leech(folder_path: str, remove: bool):
                 Messages.status_head = f"<b>📤 UPLOADING SPLIT » {count} OF {len(dir_list)} Files</b>\n\n<code>{file_name}</code>\n"
                 try:
                     MSG.status_msg = await MSG.status_msg.edit_text(
-                        text=Messages.task_msg
+                        text=fit_caption(Messages.task_msg
                         + Messages.status_head
                         + "\n⏳ __Starting.....__"
-                        + sysINFO(),
+                        + sysINFO()),
                         reply_markup=keyboard(),
                     )
                 except Exception as d:
@@ -104,10 +105,10 @@ async def Leech(folder_path: str, remove: bool):
             )
             try:
                 MSG.status_msg = await MSG.status_msg.edit_text(
-                    text=Messages.task_msg
+                    text=fit_caption(Messages.task_msg
                     + Messages.status_head
                     + "\n⏳ __Starting.....__"
-                    + sysINFO(),
+                    + sysINFO()),
                     reply_markup=keyboard(),
                 )
             except Exception as d:
@@ -140,7 +141,7 @@ async def Zip_Handler(down_path: str, is_split: bool, remove: bool):
 
     try:
         MSG.status_msg = await MSG.status_msg.edit_text(
-            text=Messages.task_msg + Messages.status_head + sysINFO(),
+            text=fit_caption(Messages.task_msg + Messages.status_head + sysINFO()),
             reply_markup=keyboard(),
         )
     except Exception as e2:
@@ -168,10 +169,10 @@ async def Unzip_Handler(down_path: str, remove: bool):
     )
 
     MSG.status_msg = await MSG.status_msg.edit_text(
-        text=Messages.task_msg
+        text=fit_caption(Messages.task_msg
         + Messages.status_head
         + "\n⏳ __Starting.....__"
-        + sysINFO(),
+        + sysINFO()),
         reply_markup=keyboard(),
     )
     filenames = [str(p) for p in pathlib.Path(down_path).glob("**/*") if p.is_file()]
@@ -258,7 +259,7 @@ async def SendLogs(is_leech: bool):
             text=f"**SOURCE »** __[Here]({Messages.src_link})__" + last_text
         )
         await MSG.status_msg.edit_text(
-            text=Messages.task_msg + l_ink + last_text,
+            text=fit_caption(Messages.task_msg + l_ink + last_text),
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
